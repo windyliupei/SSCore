@@ -1,26 +1,32 @@
 ﻿using SSCore;
 using System;
 using System.Collections.Generic;
+using System.Net.Sockets;
 
 class Program
 {
     static void Main(string[] args)
     {
-        Dictionary<string, string> config = new Dictionary<string, string>
-        {
-            { "ip", "127.0.0.1" },
-            { "port", "2020" }
-        };
-        SocketServerBase server = new SocketServerBase(config);
-
-        server.NewClientAccepted += Server_NewClientAccepted;
+        SocketServerBase server = new SocketServerBase();
+        server.ReadCompleted += Server_ReadCompleted;
         server.Start();
 
+        Console.WriteLine("enter any key to exit.");
         Console.ReadKey();
     }
 
-    private static void Server_NewClientAccepted(System.Net.Sockets.Socket client, object state)
+    private static void Server_ReadCompleted(Socket client, object state)
     {
-        Console.WriteLine("got a socket client.");
+        SocketAsyncEventArgs arg = state as SocketAsyncEventArgs;
+
+        string received = System.Text.Encoding.UTF8.GetString(arg.Buffer, arg.Offset, arg.BytesTransferred);
+
+        Console.WriteLine(received);
+
+        AsyncSocketSession session = arg.UserToken as AsyncSocketSession;
+
+        if (session == null)
+            return;
+        session.Send(received);
     }
 }

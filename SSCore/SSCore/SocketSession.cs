@@ -22,7 +22,7 @@ namespace SSCore
     /// <summary>
     /// Socket Session, all application session should base on this class
     /// </summary>
-    abstract partial class SocketSession : ISocketSession
+    public abstract partial class SocketSession : ISocketSession
     {
         public IAppSession AppSession { get; private set; }
 
@@ -109,10 +109,8 @@ namespace SSCore
         public SocketSession(Socket client)
             : this(Guid.NewGuid().ToString())
         {
-            if (client == null)
-                throw new ArgumentNullException("client");
+            m_Client = client ?? throw new ArgumentNullException("client");
 
-            m_Client = client;
             LocalEndPoint = (IPEndPoint)client.LocalEndPoint;
             RemoteEndPoint = (IPEndPoint)client.RemoteEndPoint;
         }
@@ -125,6 +123,13 @@ namespace SSCore
         public virtual void Initialize(IAppSession appSession)
         {
             AppSession = appSession;
+
+            SendingQueue queue;
+            if (m_SendingQueuePool.TryGet(out queue))
+            {
+                m_SendingQueue = queue;
+                queue.StartEnqueue();
+            }
             //Config = appSession.Config;
             //SyncSend = Config.SyncSend;
 
@@ -137,6 +142,11 @@ namespace SSCore
             //    m_SendingQueue = queue;
             //    queue.StartEnqueue();
             //}
+        }
+
+        public void InitializeSendingQueue(ISmartPool<SendingQueue> pool)
+        {
+            m_SendingQueuePool = pool;
         }
 
         /// <summary>
